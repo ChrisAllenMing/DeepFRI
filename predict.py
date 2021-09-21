@@ -67,7 +67,7 @@ if __name__ == "__main__":
     gcn = params['gcn']
     layer_name = params['layer_name']
     models = params['models']
-    labels = get_all_labels(args.annot_file, ont=args.ontology)
+    labels = get_all_labels(args.annot_file, ont=args.ontology[0])
 
     for ont in args.ontology:
         predictor = Predictor(models[ont], gcn=gcn)
@@ -85,10 +85,10 @@ if __name__ == "__main__":
             predictor.predict_from_PDB_dir(args.pdb_dir, labels)
 
         # save predictions
-        predictor.export_csv(args.output_fn_prefix + "_" + ont.upper() + "_predictions.csv", args.verbose)
-        predictor.save_predictions(args.output_fn_prefix + "_" + ont.upper() + "_pred_scores.json")
-
-        # save saliency maps
-        if args.saliency and ont in ['mf', 'ec']:
-            predictor.compute_GradCAM(layer_name=layer_name, use_guided_grads=args.use_guided_grads)
-            predictor.save_GradCAM(args.output_fn_prefix + "_" + ont.upper() + "_saliency_maps.json")
+        # predictor.export_csv(args.output_fn_prefix + "_" + ont.upper() + "_predictions.csv", args.verbose)
+        # predictor.save_predictions(args.output_fn_prefix + "_" + ont.upper() + "_pred_scores.json")
+        #
+        # # save saliency maps
+        # if args.saliency and ont in ['mf', 'ec']:
+        #     predictor.compute_GradCAM(layer_name=layer_name, use_guided_grads=args.use_guided_grads)
+        #     predictor.save_GradCAM(args.output_fn_prefix + "_" + ont.upper() + "_saliency_maps.json")

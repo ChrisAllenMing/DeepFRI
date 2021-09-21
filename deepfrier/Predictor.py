@@ -142,27 +142,34 @@ class Predictor(object):
         self.goidx2chains = {}
         self.prot2goterms = {}
         self.data = {}
+        self.preds = []
         self.targets = []
 
-        for i, chain, index in zip(len(self.test_prot_list), self.test_prot_list, self.index_list):
-            A, S, seqres = self._load_cmap(self.chain2path[chain], cmap_thresh=cmap_thresh)
-            y = self.model([A, S], training=False).numpy()[:, :, 0].reshape(-1)
-            self.Y_hat[i] = y
-            target = torch.zeros(len(self.goterms))
-            for pos_task in labels[index]:
-                target[int(pos_task)] = 1
-            self.targets.append(target)
-            self.prot2goterms[chain] = []
-            self.data[chain] = [[A, S], seqres]
-            go_idx = np.where((y >= self.thresh) == True)[0]
-            for idx in go_idx:
-                if idx not in self.goidx2chains:
-                    self.goidx2chains[idx] = set()
-                self.goidx2chains[idx].add(chain)
-                self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
+        for i, chain, index in zip(range(len(self.test_prot_list)), self.test_prot_list, self.index_list):
+            try:
+                A, S, seqres = self._load_cmap(self.chain2path[chain], cmap_thresh=cmap_thresh)
+                y = self.model([A, S], training=False).numpy()[:, :, 0].reshape(-1)
+                self.Y_hat[i] = y
+                self.preds.append(torch.tensor(y))
+                target = torch.zeros(len(self.goterms))
+                for pos_task in labels[index]:
+                    target[int(pos_task)] = 1
+                self.targets.append(target)
+                self.prot2goterms[chain] = []
+                self.data[chain] = [[A, S], seqres]
+                go_idx = np.where((y >= self.thresh) == True)[0]
+                for idx in go_idx:
+                    if idx not in self.goidx2chains:
+                        self.goidx2chains[idx] = set()
+                    self.goidx2chains[idx].add(chain)
+                    self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
+                print(self.chain2path[chain])
+            except:
+                continue
 
-        pred_ = torch.tensor(self.Y_hat)
+        pred_ = torch.stack(self.preds, dim=0)
         target_ = torch.stack(self.targets, dim=0)
+        print('Total: {}\tValid: {}'.format(len(self.test_prot_list), len(self.preds)))
         score = area_under_prc(pred_.flatten(), target_.flatten())
         score = score.mean()
         print("auprc: ", score)
