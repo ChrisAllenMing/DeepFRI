@@ -39,6 +39,21 @@ def get_all_labels(annot_file, ont='mf'):
     return labels
 
 
+def get_seq_dict(fasta_file):
+    seq_dict = {}
+    f = open(fasta_file, 'r')
+    for line in f.readlines():
+        line = line.strip()
+        if line == '':
+            continue
+        if line.startswith('>'):
+            _id = line.replace('>', '').split(' ')[0]
+            seq_dict[_id] = ''
+        else:
+            seq_dict[_id] += line
+
+    return seq_dict
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--seq', type=str,  help="Protein sequence to be annotated.")
@@ -55,6 +70,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_guided_grads', help="Use guided grads to compute gradCAM.", action="store_true")
     parser.add_argument('--saliency', help="Compute saliency maps for every protein and every MF-GO term/EC number.", action="store_true")
     parser.add_argument('--annot_file', type=str, help='The annotation file.')
+    parser.add_argument('--fasta_file', type=str, default='', help='The fasta file for all test sequences')
     args = parser.parse_args()
 
     with open(args.model_config) as json_file:
@@ -68,6 +84,10 @@ if __name__ == "__main__":
     layer_name = params['layer_name']
     models = params['models']
     labels = get_all_labels(args.annot_file, ont=args.ontology[0])
+    if not args.fasta_file == '':
+        seq_dict = get_seq_dict(args.fasta_file)
+    else:
+        seq_dict = None
 
     for ont in args.ontology:
         predictor = Predictor(models[ont], gcn=gcn)
@@ -82,7 +102,7 @@ if __name__ == "__main__":
         if args.cmap_csv is not None:
             predictor.predict_from_catalogue(args.cmap_csv)
         if args.pdb_dir is not None:
-            predictor.predict_from_PDB_dir(args.pdb_dir, labels)
+            predictor.predict_from_PDB_dir(args.pdb_dir, labels, seq_dict=seq_dict)
 
         # save predictions
         # predictor.export_csv(args.output_fn_prefix + "_" + ont.upper() + "_predictions.csv", args.verbose)

@@ -71,7 +71,7 @@ class Predictor(object):
         self.goterms = np.asarray(metadata['goterms'])
         self.thresh = 0.1*np.ones(len(self.goterms))
 
-    def _load_cmap(self, filename, cmap_thresh=10.0):
+    def _load_cmap(self, filename, seq_dict=None, cmap_thresh=10.0):
         if filename.endswith('.pdb'):
             D, seq = load_predicted_PDB(filename)
             A = np.double(D < cmap_thresh)
@@ -91,6 +91,11 @@ class Predictor(object):
             os.remove(rnd_fn)
         else:
             raise ValueError("File must be given in *.npz or *.pdb format.")
+
+        if seq_dict is not None:
+            _id = filename.split('/')[-1].split('.')[0].split('_')[0]
+            if _id in seq_dict:
+                seq = seq_dict[_id]
         # ##
         S = seq2onehot(seq)
         S = S.reshape(1, *S.shape)
@@ -132,7 +137,7 @@ class Predictor(object):
                 self.goidx2chains[idx].add(chain)
                 self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
 
-    def predict_from_PDB_dir(self, dir_name, labels, cmap_thresh=10.0):
+    def predict_from_PDB_dir(self, dir_name, labels, seq_dict=None, cmap_thresh=10.0):
         print ("### Computing predictions from directory with PDB files...")
         pdb_fn_list = glob.glob(dir_name + '/*.pdb*')
         self.index_list = [int(pdb_fn.split('/')[-1].split('.')[0].split('_')[1]) for pdb_fn in pdb_fn_list]
@@ -147,7 +152,7 @@ class Predictor(object):
 
         for i, chain, index in zip(range(len(self.test_prot_list)), self.test_prot_list, self.index_list):
             try:
-                A, S, seqres = self._load_cmap(self.chain2path[chain], cmap_thresh=cmap_thresh)
+                A, S, seqres = self._load_cmap(self.chain2path[chain], seq_dict=seq_dict, cmap_thresh=cmap_thresh)
                 print(A.shape, S.shape)
                 y = self.model([A, S], training=False).numpy()[:, :, 0].reshape(-1)
                 self.Y_hat[i] = y

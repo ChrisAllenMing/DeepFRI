@@ -21,18 +21,18 @@ def load_predicted_PDB(pdbfile):
     distances = np.empty((len(residues), len(residues)))
     for x in range(len(residues)):
         for y in range(len(residues)):
-            # atoms_1 = [atom for atom in residues[x].get_atoms()]
-            # atoms_2 = [atom for atom in residues[y].get_atoms()]
-            # try:
-            #     one = residues[x]["CA"].get_coord()
-            # except:
-            #     one = atoms_1[0].get_coord()
-            # try:
-            #     two = residues[y]["CA"].get_coord()
-            # except:
-            #     two = atoms_2[0].get_coord()
-            one = residues[x]["CA"].get_coord()
-            two = residues[y]["CA"].get_coord()
+            atoms_1 = [atom for atom in residues[x].get_atoms()]
+            atoms_2 = [atom for atom in residues[y].get_atoms()]
+            try:
+                one = residues[x]["CA"].get_coord()
+            except:
+                one = atoms_1[0].get_coord()
+            try:
+                two = residues[y]["CA"].get_coord()
+            except:
+                two = atoms_2[0].get_coord()
+            # one = residues[x]["CA"].get_coord()
+            # two = residues[y]["CA"].get_coord()
             distances[x, y] = np.linalg.norm(one-two)
 
     return distances, seqs[0]
