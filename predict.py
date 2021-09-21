@@ -3,6 +3,42 @@ import argparse
 from deepfrier.Predictor import Predictor
 
 
+def get_all_labels(annot_file, ont='mf'):
+    if ont == 'ec':
+        with open(annot_file, "r") as f:
+            f.readline()
+            tasks = f.readline().strip().split("\t")
+            task_dict = {v: k for k, v in enumerate(tasks)}
+            f.readline()
+            labels = []
+            for line in f:
+                _, pos_tasks = line.strip().split("\t")
+                pos_tasks = [task_dict[x] for x in pos_tasks.split(",")]
+                labels.append(pos_tasks)
+    else:
+        with open(annot_file, "r") as f:
+            lines = f.readlines()
+            if ont == 'mf':
+                idx = 1
+            elif ont == 'bp':
+                idx = 2
+            elif ont == 'cc':
+                idx = 3
+            tasks = lines[(idx - 1) * 4 + 1].strip().split("\t")
+            task_dict = {v: k for k, v in enumerate(tasks)}
+            lines = lines[13:]
+            labels = []
+            for line in lines:
+                try:
+                    pos_tasks = line.strip().split("\t")[idx]
+                    pos_tasks = [task_dict[x] for x in pos_tasks.split(",")]
+                except:
+                    pos_tasks = []
+                labels.append(pos_tasks)
+
+    return labels
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--seq', type=str,  help="Protein sequence to be annotated.")
@@ -18,6 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', help="Prints predictions.", action="store_true")
     parser.add_argument('--use_guided_grads', help="Use guided grads to compute gradCAM.", action="store_true")
     parser.add_argument('--saliency', help="Compute saliency maps for every protein and every MF-GO term/EC number.", action="store_true")
+    parser.add_argument('--annot_file', type=str, help='The annotation file.')
     args = parser.parse_args()
 
     with open(args.model_config) as json_file:
@@ -30,6 +67,7 @@ if __name__ == "__main__":
     gcn = params['gcn']
     layer_name = params['layer_name']
     models = params['models']
+    labels = get_all_labels(args.annot_file, ont=args.ontology)
 
     for ont in args.ontology:
         predictor = Predictor(models[ont], gcn=gcn)
@@ -44,7 +82,7 @@ if __name__ == "__main__":
         if args.cmap_csv is not None:
             predictor.predict_from_catalogue(args.cmap_csv)
         if args.pdb_dir is not None:
-            predictor.predict_from_PDB_dir(args.pdb_dir)
+            predictor.predict_from_PDB_dir(args.pdb_dir, labels)
 
         # save predictions
         predictor.export_csv(args.output_fn_prefix + "_" + ont.upper() + "_predictions.csv", args.verbose)

@@ -7,9 +7,11 @@ import secrets
 
 import numpy as np
 import tensorflow as tf
+import torch
 
 from .utils import load_catalogue, load_FASTA, load_predicted_PDB, seq2onehot
 from .layers import MultiGraphConv, GraphConv, FuncPredictor, SumPooling
+from .metric import area_under_roc, area_under_prc, f1_max
 
 
 class GradCAM(object):
@@ -130,19 +132,26 @@ class Predictor(object):
                 self.goidx2chains[idx].add(chain)
                 self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
 
-    def predict_from_PDB_dir(self, dir_name, cmap_thresh=10.0):
+    def predict_from_PDB_dir(self, dir_name, labels, cmap_thresh=10.0):
         print ("### Computing predictions from directory with PDB files...")
         pdb_fn_list = glob.glob(dir_name + '/*.pdb*')
+        self.index_list = [int(pdb_fn.split('/')[-1].split('.')[0].split('_')[1]) for pdb_fn in pdb_fn_list]
         self.chain2path = {pdb_fn.split('/')[-1].split('.')[0]: pdb_fn for pdb_fn in pdb_fn_list}
         self.test_prot_list = list(self.chain2path.keys())
         self.Y_hat = np.zeros((len(self.test_prot_list), len(self.goterms)), dtype=float)
         self.goidx2chains = {}
         self.prot2goterms = {}
         self.data = {}
-        for i, chain in enumerate(self.test_prot_list):
+        self.targets = []
+
+        for i, chain, index in zip(len(self.test_prot_list), self.test_prot_list, self.index_list):
             A, S, seqres = self._load_cmap(self.chain2path[chain], cmap_thresh=cmap_thresh)
             y = self.model([A, S], training=False).numpy()[:, :, 0].reshape(-1)
             self.Y_hat[i] = y
+            target = torch.zeros(len(self.goterms))
+            for pos_task in labels[index]:
+                target[int(pos_task)] = 1
+            self.targets.append(target)
             self.prot2goterms[chain] = []
             self.data[chain] = [[A, S], seqres]
             go_idx = np.where((y >= self.thresh) == True)[0]
@@ -151,6 +160,29 @@ class Predictor(object):
                     self.goidx2chains[idx] = set()
                 self.goidx2chains[idx].add(chain)
                 self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
+
+        pred_ = torch.tensor(self.Y_hat)
+        target_ = torch.stack(self.targets, dim=0)
+        score = area_under_prc(pred_.flatten(), target_.flatten())
+        score = score.mean()
+        print("auprc: ", score)
+        score = area_under_prc(pred_, target_, dim=1)
+        score = score.mean()
+        print("auprc (protein-centric): ", score)
+        score = area_under_prc(pred_, target_, dim=0)
+        score = score.mean()
+        print("auprc (term-centric): ", score)
+        score = area_under_roc(pred_.flatten(), target_.flatten())
+        score = score.mean()
+        print("auroc: ", score)
+        score = area_under_roc(pred_, target_, dim=1)
+        score = score.mean()
+        print("auroc (protein-centric): ", score)
+        score = area_under_roc(pred_, target_, dim=0)
+        score = score.mean()
+        print("auroc (term-centric): ", score)
+        score = f1_max(pred_, target_)
+        print("f1_max: ", score)
 
     def predict_from_catalogue(self, catalogue_fn, cmap_thresh=10.0):
         print ("### Computing predictions from catalogue...")
