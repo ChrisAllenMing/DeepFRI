@@ -148,6 +148,7 @@ class Predictor(object):
         for i, chain, index in zip(range(len(self.test_prot_list)), self.test_prot_list, self.index_list):
             try:
                 A, S, seqres = self._load_cmap(self.chain2path[chain], cmap_thresh=cmap_thresh)
+                print(A.shape, S.shape)
                 y = self.model([A, S], training=False).numpy()[:, :, 0].reshape(-1)
                 self.Y_hat[i] = y
                 self.preds.append(torch.tensor(y))
