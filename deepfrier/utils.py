@@ -6,13 +6,41 @@ from sklearn.metrics import average_precision_score
 
 from Bio import SeqIO
 from Bio.PDB.PDBParser import PDBParser
+from collections import OrderedDict
 
+AA_dict = OrderedDict([
+        ('ALA', 'A'),
+        ('ASX', 'B'),
+        ('CYS', 'C'),
+        ('ASP', 'D'),
+        ('GLU', 'E'),
+        ('PHE', 'F'),
+        ('GlY', 'G'),
+        ('HIS', 'H'),
+        ('ILE', 'I'),
+        ('LYS', 'K'),
+        ('LEU', 'L'),
+        ('MET', 'M'),
+        ('ASN', 'N'),
+        ('PRO', 'P'),
+        ('GLN', 'Q'),
+        ('ARG', 'R'),
+        ('SER', 'S'),
+        ('THR', 'T'),
+        ('SEC', 'U'),
+        ('VAL', 'V'),
+        ('TRP', 'W'),
+        ('XAA', 'X'),
+        ('TYR', 'Y'),
+        ('GLX', 'Z')])
 
 def load_predicted_PDB(pdbfile):
     # Generate (diagonalized) C_alpha distance matrix from a pdbfile
     parser = PDBParser()
     structure = parser.get_structure(pdbfile.split('/')[-1].split('.')[0], pdbfile)
     residues = [r for r in structure.get_residues()]
+    residue_names = [r.get_resname() for r in structure.get_residues()]
+    sequence = [AA_dict[r] for r in residue_names]
 
     # sequence from atom lines
     records = SeqIO.parse(pdbfile, 'pdb-atom')
@@ -35,7 +63,7 @@ def load_predicted_PDB(pdbfile):
             # two = residues[y]["CA"].get_coord()
             distances[x, y] = np.linalg.norm(one-two)
 
-    return distances, seqs[0]
+    return distances, sequence
 
 
 def load_FASTA(filename):
