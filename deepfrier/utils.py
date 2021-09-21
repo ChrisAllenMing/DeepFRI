@@ -15,7 +15,7 @@ AA_dict = OrderedDict([
         ('ASP', 'D'),
         ('GLU', 'E'),
         ('PHE', 'F'),
-        ('GlY', 'G'),
+        ('GLY', 'G'),
         ('HIS', 'H'),
         ('ILE', 'I'),
         ('LYS', 'K'),
@@ -40,7 +40,10 @@ def load_predicted_PDB(pdbfile):
     structure = parser.get_structure(pdbfile.split('/')[-1].split('.')[0], pdbfile)
     residues = [r for r in structure.get_residues()]
     residue_names = [r.get_resname() for r in structure.get_residues()]
-    sequence = [AA_dict[r] for r in residue_names]
+    sequence = ''
+    for r in residue_names:
+        sequence += AA_dict[r]
+    print(sequence)
 
     # sequence from atom lines
     records = SeqIO.parse(pdbfile, 'pdb-atom')
