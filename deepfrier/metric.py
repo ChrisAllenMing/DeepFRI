@@ -66,4 +66,5 @@ def f1_max(pred, target):
     all_recall = recall[all_order] - torch.where(is_start, torch.zeros_like(recall), recall[all_order - 1])
     all_recall = all_recall.cumsum(0) / pred.shape[0]
     all_f1 = 2 * all_precision * all_recall / (all_precision + all_recall + 1e-10)
+    all_f1 = all_f1[~torch.isnan(all_f1)]
     return all_f1.max()
