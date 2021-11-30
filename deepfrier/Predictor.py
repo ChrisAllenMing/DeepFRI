@@ -158,7 +158,7 @@ class Predictor(object):
                 self.Y_hat[i] = y
                 self.preds.append(torch.tensor(y))
                 target = torch.zeros(len(self.goterms))
-                for pos_task in labels[index]:
+                for pos_task in labels[chain]:
                     target[int(pos_task)] = 1
                 self.targets.append(target)
                 self.prot2goterms[chain] = []
@@ -218,19 +218,26 @@ class Predictor(object):
                 self.goidx2chains[idx].add(chain)
                 self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
 
-    def predict_from_fasta(self, fasta_fn):
+    def predict_from_fasta(self, fasta_fn, labels):
         print ("### Computing predictions from fasta...")
         self.test_prot_list, sequences = load_FASTA(fasta_fn)
         self.Y_hat = np.zeros((len(self.test_prot_list), len(self.goterms)), dtype=float)
         self.goidx2chains = {}
         self.prot2goterms = {}
         self.data = {}
+        self.preds = []
+        self.targets = []
 
         for i, chain in enumerate(self.test_prot_list):
             S = seq2onehot(str(sequences[i]))
             S = S.reshape(1, *S.shape)
             y = self.model(S, training=False).numpy()[:, :, 0].reshape(-1)
             self.Y_hat[i] = y
+            self.preds.append(torch.tensor(y))
+            target = torch.zeros(len(self.goterms))
+            for pos_task in labels[chain]:
+                target[int(pos_task)] = 1
+            self.targets.append(target)
             self.prot2goterms[chain] = []
             self.data[chain] = [[S], str(sequences[i])]
             go_idx = np.where((y >= self.thresh) == True)[0]
@@ -239,6 +246,31 @@ class Predictor(object):
                     self.goidx2chains[idx] = set()
                 self.goidx2chains[idx].add(chain)
                 self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
+            print(chain)
+
+        pred_ = torch.stack(self.preds, dim=0)
+        target_ = torch.stack(self.targets, dim=0)
+        print('Total: {}\tValid: {}'.format(len(self.test_prot_list), len(self.preds)))
+        score = area_under_prc(pred_.flatten(), target_.flatten())
+        score = score.mean()
+        print("auprc: ", score)
+        score = area_under_prc(pred_, target_, dim=1)
+        score = score.mean()
+        print("auprc (protein-centric): ", score)
+        score = area_under_prc(pred_, target_, dim=0)
+        score = score.mean()
+        print("auprc (term-centric): ", score)
+        score = area_under_roc(pred_.flatten(), target_.flatten())
+        score = score.mean()
+        print("auroc: ", score)
+        score = area_under_roc(pred_, target_, dim=1)
+        score = score.mean()
+        print("auroc (protein-centric): ", score)
+        score = area_under_roc(pred_, target_, dim=0)
+        score = score.mean()
+        print("auroc (term-centric): ", score)
+        score = f1_max(pred_, target_)
+        print("f1_max: ", score)
 
     def save_predictions(self, output_fn):
         print ("### Saving predictions to *.json file...")

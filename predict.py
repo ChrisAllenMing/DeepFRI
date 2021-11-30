@@ -10,11 +10,11 @@ def get_all_labels(annot_file, ont='mf'):
             tasks = f.readline().strip().split("\t")
             task_dict = {v: k for k, v in enumerate(tasks)}
             f.readline()
-            labels = []
+            labels = {}
             for line in f:
-                _, pos_tasks = line.strip().split("\t")
+                name, pos_tasks = line.strip().split("\t")
                 pos_tasks = [task_dict[x] for x in pos_tasks.split(",")]
-                labels.append(pos_tasks)
+                labels[name] = pos_tasks
     else:
         with open(annot_file, "r") as f:
             lines = f.readlines()
@@ -27,14 +27,15 @@ def get_all_labels(annot_file, ont='mf'):
             tasks = lines[(idx - 1) * 4 + 1].strip().split("\t")
             task_dict = {v: k for k, v in enumerate(tasks)}
             lines = lines[13:]
-            labels = []
+            labels = {}
             for line in lines:
+                name = line.strip().split("\t")[0]
                 try:
                     pos_tasks = line.strip().split("\t")[idx]
                     pos_tasks = [task_dict[x] for x in pos_tasks.split(",")]
                 except:
                     pos_tasks = []
-                labels.append(pos_tasks)
+                labels[name] = pos_tasks
 
     return labels
 
@@ -98,7 +99,7 @@ if __name__ == "__main__":
         if args.pdb_fn is not None:
             predictor.predict(args.pdb_fn)
         if args.fasta_fn is not None:
-            predictor.predict_from_fasta(args.fasta_fn)
+            predictor.predict_from_fasta(args.fasta_fn, labels)
         if args.cmap_csv is not None:
             predictor.predict_from_catalogue(args.cmap_csv)
         if args.pdb_dir is not None:
