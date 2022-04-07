@@ -69,14 +69,37 @@ def load_predicted_PDB(pdbfile):
     return distances, sequence
 
 
-def load_FASTA(filename):
+def load_FASTA(filename, split_file='', cutoff=95):
+    if not split_file == '':
+        select_list = []
+        with open(split_file, 'r') as f:
+            head = f.readline().strip()
+            fields = head.split(',')
+            col = fields.index("<{}%".format(str(cutoff)))
+            for line in f.readlines():
+                line = line.strip()
+                if line == '':
+                    continue
+                pdb_id = line.split(',')[0]
+                valid = int(line.split(',')[col])
+                if valid:
+                    select_list.append(pdb_id)
+    else:
+        select_list = None
+
     # Loads fasta file and returns a list of the Bio SeqIO records
     infile = open(filename, 'rU')
     entries = []
     proteins = []
     for entry in SeqIO.parse(infile, 'fasta'):
-        entries.append(str(entry.seq))
-        proteins.append(str(entry.id))
+        if select_list is not None:
+            if entry.id in select_list:
+                entries.append(str(entry.seq))
+                proteins.append(str(entry.id))
+        else:
+            entries.append(str(entry.seq))
+            proteins.append(str(entry.id))
+
     return proteins, entries
 
 

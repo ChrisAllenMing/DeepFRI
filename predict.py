@@ -121,7 +121,7 @@ if __name__ == "__main__":
         if args.pdb_fn is not None:
             predictor.predict(args.pdb_fn)
         if args.fasta_fn is not None:
-            predictor.predict_from_fasta(args.fasta_fn, labels)
+            predictor.predict_from_fasta(args.fasta_fn, labels, split_file=args.split_file, cutoff=args.cutoff)
         if args.cmap_csv is not None:
             predictor.predict_from_catalogue(args.cmap_csv)
         if args.pdb_dir is not None:

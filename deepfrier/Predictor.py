@@ -220,9 +220,9 @@ class Predictor(object):
                 self.goidx2chains[idx].add(chain)
                 self.prot2goterms[chain].append((self.goterms[idx], self.gonames[idx], float(y[idx])))
 
-    def predict_from_fasta(self, fasta_fn, labels):
+    def predict_from_fasta(self, fasta_fn, labels, split_file='', cutoff=95):
         print ("### Computing predictions from fasta...")
-        self.test_prot_list, sequences = load_FASTA(fasta_fn)
+        self.test_prot_list, sequences = load_FASTA(fasta_fn, split_file=split_file, cutoff=cutoff)
         self.Y_hat = np.zeros((len(self.test_prot_list), len(self.goterms)), dtype=float)
         self.goidx2chains = {}
         self.prot2goterms = {}
