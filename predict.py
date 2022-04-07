@@ -40,7 +40,24 @@ def get_all_labels(annot_file, ont='mf'):
     return labels
 
 
-def get_seq_dict(fasta_file):
+def get_seq_dict(fasta_file, split_file='', cutoff=95):
+    if not split_file == '':
+        select_list = []
+        with open(split_file, 'r') as f:
+            head = f.readline().strip()
+            fields = head.split(',')
+            col = fields.index("<{}%".format(str(cutoff)))
+            for line in f.readlines():
+                line = line.strip()
+                if line == '':
+                    continue
+                pdb_id = line.split(',')[0]
+                valid = int(line.split(',')[col])
+                if valid:
+                    select_list.append(pdb_id)
+    else:
+        select_list = None
+
     seq_dict = {}
     f = open(fasta_file, 'r')
     for line in f.readlines():
@@ -52,6 +69,9 @@ def get_seq_dict(fasta_file):
             seq_dict[_id] = ''
         else:
             seq_dict[_id] += line
+
+    if select_list is not None:
+        seq_dict = {k: v for k, v in seq_dict.items() if k in select_list}
 
     return seq_dict
 
@@ -72,6 +92,8 @@ if __name__ == "__main__":
     parser.add_argument('--saliency', help="Compute saliency maps for every protein and every MF-GO term/EC number.", action="store_true")
     parser.add_argument('--annot_file', type=str, help='The annotation file.')
     parser.add_argument('--fasta_file', type=str, default='', help='The fasta file for all test sequences')
+    parser.add_argument('--split_file', type=str, default='', help='The split file for all test sequences')
+    parser.add_argument('--cutoff', type=int, default=95, choices=[30, 40, 50, 70, 95], help='Sequence identity cutoff')
     args = parser.parse_args()
 
     with open(args.model_config) as json_file:
@@ -86,7 +108,7 @@ if __name__ == "__main__":
     models = params['models']
     labels = get_all_labels(args.annot_file, ont=args.ontology[0])
     if not args.fasta_file == '':
-        seq_dict = get_seq_dict(args.fasta_file)
+        seq_dict = get_seq_dict(args.fasta_file, split_file=args.split_file, cutoff=args.cutoff)
     else:
         seq_dict = None
 

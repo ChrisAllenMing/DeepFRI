@@ -140,6 +140,8 @@ class Predictor(object):
     def predict_from_PDB_dir(self, dir_name, labels, seq_dict=None, cmap_thresh=10.0):
         print ("### Computing predictions from directory with PDB files...")
         pdb_fn_list = glob.glob(dir_name + '/*.pdb*')
+        if seq_dict is not None:
+            pdb_fn_list = [pdb_fn for pdb_fn in pdb_fn_list if pdb_fn.split('/')[-1].split('.')[0].split('_')[0] in seq_dict]
         self.index_list = [int(pdb_fn.split('/')[-1].split('.')[0].split('_')[1]) for pdb_fn in pdb_fn_list]
         self.chain2path = {pdb_fn.split('/')[-1].split('.')[0]: pdb_fn for pdb_fn in pdb_fn_list}
         self.test_prot_list = list(self.chain2path.keys())
